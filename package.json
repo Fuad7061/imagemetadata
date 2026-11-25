@@ -1,0 +1,18 @@
+{
+  "name": "imagemetadata",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Fast self-hosted image metadata embed/strip API with an admin dashboard",
+  "type": "module",
+  "main": "src/server.js",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "check": "node --check src/server.js && node --check src/core.js && node --check src/store.js && node --check src/auth.js && node --check src/http-utils.js && node --check src/ratelimit.js && node --check src/config.js && node --check public/app.js"
+  },
+  "dependencies": {},
+  "license": "MIT"
+}

@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#0b1120">
+  <title>ImageMetadata — Control Panel</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+
+<div id="login-view" class="login-wrap">
+  <div class="login-card">
+    <div class="brand">
+      <img src="/favicon.svg" alt="" class="brand-logo">
+      <div>
+        <h1>ImageMetadata</h1>
+        <p>Admin control panel</p>
+      </div>
+    </div>
+    <form id="login-form" autocomplete="on">
+      <label for="admin-key">Admin key</label>
+      <input id="admin-key" name="admin-key" type="password" autocomplete="current-password" placeholder="Enter your admin key" required autofocus>
+      <button type="submit" class="btn btn-primary btn-block">Sign in</button>
+    </form>
+    <p class="hint-text">The admin key is shown once on first boot or set via the <code>ADMIN_KEY</code> environment variable.</p>
+    <p id="login-error" class="form-error" hidden></p>
+  </div>
+</div>
+
+<div id="app-view" class="app-shell" hidden>
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <img src="/favicon.svg" alt="" class="brand-logo">
+      <span>ImageMetadata</span>
+    </div>
+    <nav class="nav">
+      <button class="nav-item active" data-view="overview"><span class="nav-icon">◈</span> Overview</button>
+      <button class="nav-item" data-view="keys"><span class="nav-icon">⚿</span> API Keys</button>
+      <button class="nav-item" data-view="playground"><span class="nav-icon">▷</span> Playground</button>
+      <button class="nav-item" data-view="logs"><span class="nav-icon">≡</span> Logs</button>
+      <button class="nav-item" data-view="settings"><span class="nav-icon">⚙</span> Settings</button>
+      <button class="nav-item" data-view="docs"><span class="nav-icon">?</span> API Docs</button>
+    </nav>
+    <div class="sidebar-foot">
+      <span id="version-label" class="badge">v?</span>
+      <button id="logout-btn" class="btn btn-ghost btn-sm">Sign out</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div>
+        <h2 id="view-title">Overview</h2>
+        <p id="view-subtitle">Live status and usage at a glance</p>
+      </div>
+      <div class="topbar-actions">
+        <span class="status-dot" id="status-dot"></span>
+        <span class="status-text" id="status-text">Checking…</span>
+        <button id="refresh-btn" class="btn btn-ghost btn-sm">Refresh</button>
+      </div>
+    </header>
+
+    <section id="view-overview" class="view">
+      <div class="stats-grid" id="stats-grid"></div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-head"><h3>Requests — last 24 hours</h3></div>
+          <div class="card-body" id="hourly-chart"></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h3>Recent activity</h3></div>
+          <div class="card-body" id="recent-activity"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h3>Quick start</h3></div>
+        <div class="card-body" id="quickstart"></div>
+      </div>
+    </section>
+
+    <section id="view-keys" class="view" hidden>
+      <div class="card">
+        <div class="card-head">
+          <h3>API keys</h3>
+          <button id="create-key-btn" class="btn btn-primary">Create key</button>
+        </div>
+        <div class="card-body">
+          <p class="muted">Use these keys in the <code>Authorization: Bearer &lt;key&gt;</code> header. The secret is only displayed once at creation.</p>
+          <div class="table-wrap"><table class="table" id="keys-table"></table></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-playground" class="view" hidden>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-head"><h3>Test a request</h3></div>
+          <div class="card-body">
+            <form id="test-form" class="form-grid">
+              <div class="field full">
+                <label for="t-mode">Mode</label>
+                <select id="t-mode">
+                  <option value="embed-metadata">Embed metadata</option>
+                  <option value="strip-metadata">Strip metadata</option>
+                </select>
+              </div>
+              <div class="field full">
+                <label for="t-image">Image URL or Base64</label>
+                <input id="t-image" placeholder="https://example.com/photo.jpg" required>
+              </div>
+              <div class="field full">
+                <label for="t-title">Title <span class="muted">(required for embed)</span></label>
+                <input id="t-title" placeholder="A beautiful sunset">
+              </div>
+              <div class="field full">
+                <label for="t-description">Description</label>
+                <textarea id="t-description" rows="2" placeholder="Short caption"></textarea>
+              </div>
+              <div class="field full">
+                <label for="t-keywords">Keywords <span class="muted">(comma separated)</span></label>
+                <input id="t-keywords" placeholder="sunset, mountains, nature">
+              </div>
+              <div class="field"><label for="t-category">Category</label><input id="t-category"></div>
+              <div class="field"><label for="t-creator">Creator</label><input id="t-creator"></div>
+              <div class="field"><label for="t-copyright">Copyright</label><input id="t-copyright"></div>
+              <div class="field"><label for="t-software">Software override</label><input id="t-software"></div>
+              <div class="field">
+                <label for="t-profile">Camera profile</label>
+                <select id="t-profile">
+                  <option value="">Random</option>
+                  <option value="sony-a7iv-85">Sony A7 IV · 85mm</option>
+                  <option value="nikon-z8-35">Nikon Z8 · 35mm</option>
+                  <option value="canon-r5-50">Canon R5 · 50mm</option>
+                  <option value="fuji-xt5-23">Fujifilm X-T5 · 23mm</option>
+                </select>
+              </div>
+              <fieldset class="field full location-fields">
+                <legend>Location <span class="muted">(blank = random city)</span></legend>
+                <div class="form-grid nested">
+                  <div class="field"><label for="t-city">City</label><input id="t-city"></div>
+                  <div class="field"><label for="t-country">Country</label><input id="t-country"></div>
+                  <div class="field"><label for="t-lat">Latitude</label><input id="t-lat" type="number" step="any"></div>
+                  <div class="field"><label for="t-lon">Longitude</label><input id="t-lon" type="number" step="any"></div>
+                </div>
+              </fieldset>
+              <div class="field full">
+                <button type="submit" class="btn btn-primary btn-block" id="test-submit">Run request</button>
+              </div>
+            </form>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h3>Response</h3></div>
+          <div class="card-body">
+            <div id="test-preview" class="preview" hidden></div>
+            <pre id="test-output" class="code-block">Fill the form and run a request.</pre>
+            <div class="code-head">
+              <span>Equivalent cURL</span>
+              <button id="copy-test-curl" class="btn btn-ghost btn-sm">Copy</button>
+            </div>
+            <pre id="test-curl" class="code-block"></pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-logs" class="view" hidden>
+      <div class="card">
+        <div class="card-head">
+          <h3>Request logs <span class="muted" id="log-retention-note"></span></h3>
+          <button id="clear-logs-btn" class="btn btn-danger btn-sm">Clear logs</button>
+        </div>
+        <div class="card-body">
+          <div class="toolbar">
+            <input id="log-search" placeholder="Search path, IP, message…">
+            <select id="log-status">
+              <option value="">All statuses</option>
+              <option value="success">Success (2xx)</option>
+              <option value="error">Errors (4xx/5xx)</option>
+            </select>
+            <button id="log-filter-btn" class="btn btn-ghost">Filter</button>
+          </div>
+          <div class="table-wrap"><table class="table" id="logs-table"></table></div>
+          <div class="pagination">
+            <button id="log-prev" class="btn btn-ghost btn-sm">Previous</button>
+            <span id="log-page" class="muted">Page 1</span>
+            <button id="log-next" class="btn btn-ghost btn-sm">Next</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-settings" class="view" hidden>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-head"><h3>API &amp; uploads</h3></div>
+          <div class="card-body">
+            <div class="setting">
+              <label class="switch-label" for="s-anon">Allow anonymous API requests</label>
+              <input type="checkbox" id="s-anon" class="switch">
+              <p class="muted">Off by default. When off, every API call needs a valid key.</p>
+            </div>
+            <div class="setting">
+              <label for="s-uploadmode">Upload target</label>
+              <select id="s-uploadmode">
+                <option value="external">External providers (original behaviour)</option>
+                <option value="local">Self-hosted local storage</option>
+              </select>
+              <p class="muted">External order: tmpfiles.org → uguu.se → litterbox.catbox.moe. Local keeps files on this server under <code>/app/data/files</code>.</p>
+            </div>
+            <div class="setting" id="s-order-wrap">
+              <label>External provider order</label>
+              <div id="s-order" class="order-list"></div>
+            </div>
+            <div class="setting" id="s-localttl-wrap" hidden>
+              <label for="s-localttl">Local file lifetime (hours)</label>
+              <input id="s-localttl" type="number" min="1" max="720" value="24">
+            </div>
+            <div class="setting">
+              <label for="s-baseurl">Public base URL</label>
+              <input id="s-baseurl" placeholder="https://images.example.com">
+              <p class="muted">Used for generated links in API responses and docs. Leave blank to use the request host.</p>
+            </div>
+            <div class="setting">
+              <label for="s-profile">Default camera profile</label>
+              <select id="s-profile">
+                <option value="">Random per request</option>
+                <option value="sony-a7iv-85">Sony A7 IV · 85mm</option>
+                <option value="nikon-z8-35">Nikon Z8 · 35mm</option>
+                <option value="canon-r5-50">Canon R5 · 50mm</option>
+                <option value="fuji-xt5-23">Fujifilm X-T5 · 23mm</option>
+              </select>
+            </div>
+            <fieldset class="setting location-fields">
+              <legend>Default location <span class="muted">(blank = random city per request)</span></legend>
+              <div class="form-grid nested">
+                <div class="field"><label for="s-city">City</label><input id="s-city"></div>
+                <div class="field"><label for="s-country">Country</label><input id="s-country"></div>
+                <div class="field"><label for="s-lat">Latitude</label><input id="s-lat" type="number" step="any"></div>
+                <div class="field"><label for="s-lon">Longitude</label><input id="s-lon" type="number" step="any"></div>
+              </div>
+            </fieldset>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><h3>Protection &amp; retention</h3></div>
+          <div class="card-body">
+            <div class="setting">
+              <label class="switch-label" for="s-rlenabled">Enable rate limiting</label>
+              <input type="checkbox" id="s-rlenabled" class="switch">
+            </div>
+            <div class="setting">
+              <label for="s-rlmax">Requests per window</label>
+              <input id="s-rlmax" type="number" min="1" max="1000000" value="60">
+            </div>
+            <div class="setting">
+              <label for="s-rlwindow">Window length (ms)</label>
+              <input id="s-rlwindow" type="number" min="1000" max="86400000" step="1000" value="60000">
+            </div>
+            <div class="setting">
+              <label for="s-retention">Log retention (days)</label>
+              <input id="s-retention" type="number" value="10" disabled>
+              <p class="muted">Hard-capped at 10 days. Older entries are removed automatically every hour.</p>
+            </div>
+            <div class="setting">
+              <label for="s-newadmin">Rotate admin key</label>
+              <input id="s-newadmin" type="password" placeholder="Leave blank to generate a random key">
+              <button id="rotate-key-btn" class="btn btn-danger btn-block">Rotate admin key</button>
+              <p class="muted">Rotating signs out every session, including this one.</p>
+            </div>
+            <button id="save-settings-btn" class="btn btn-primary btn-block">Save settings</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-docs" class="view" hidden>
+      <div class="card">
+        <div class="card-head">
+          <h3>API documentation</h3>
+          <a class="btn btn-ghost btn-sm" href="/docs" target="_blank" rel="noopener">Open raw docs</a>
+        </div>
+        <div class="card-body" id="docs-body"></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div id="modal-root" hidden>
+  <div class="modal-backdrop" data-close="1"></div>
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="modal-head">
+      <h3 id="modal-title">Title</h3>
+      <button class="modal-close" data-close="1" aria-label="Close">×</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-foot" id="modal-foot"></div>
+  </div>
+</div>
+
+<div id="toast-root" class="toast-root"></div>
+
+<script src="/app.js" defer></script>
+</body>
+</html>
