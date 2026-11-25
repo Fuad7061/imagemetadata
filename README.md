@@ -13,7 +13,7 @@ The original Cloudflare Worker (`worker.js`) is kept untouched as a reference. `
 - **Local self-hosted storage** option (toggle in Settings) instead of third-party temp hosts, with file expiry and cleanup.
 - **Rate limiting**, request logs, live stats, and audit trail for admin actions.
 - **10-day log retention, enforced**: the setting is hard-capped at 10 days, cleanup runs hourly and on boot, and Docker log rotation is configured in `docker-compose.yml`.
-- **Zero runtime dependencies**, gzip responses, in-memory static assets, small multi-stage Docker image (`node:22-bookworm-slim`, non-root).
+- **Zero runtime dependencies**, gzip responses, in-memory static assets, small single-stage Docker image (`node:22-bookworm-slim`, non-root).
 
 ## Quick start
 
@@ -148,7 +148,7 @@ Only `image_path` is required. Response includes `stripped_image_url`, `expires_
 ## Project structure
 
 ```
-Dockerfile            multi-stage, non-root, healthcheck
+Dockerfile            single-stage, non-root, healthcheck
 docker-compose.yml    local deployment + Docker log rotation
 worker.js             original Cloudflare Worker (unchanged reference)
 src/core.js           ported metadata engine (same parameters as worker.js)
