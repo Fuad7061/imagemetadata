@@ -209,7 +209,12 @@
                 <option value="external">External providers (original behaviour)</option>
                 <option value="local">Self-hosted local storage</option>
               </select>
-              <p class="muted">External order: tmpfiles.org → uguu.se → litterbox.catbox.moe. Local keeps files on this server under <code>/app/data/files</code>.</p>
+              <p class="muted">External order: tmpfiles.org → uguu.se → litterbox → catbox.moe (permanent). Local keeps files on this server under <code>/app/data/files</code>.</p>
+            </div>
+            <div class="setting" id="s-longlived-wrap">
+              <label class="switch-label" for="s-longlived">Add 48-hour image URL</label>
+              <input type="checkbox" id="s-longlived" class="switch">
+              <p class="muted">Adds <code>long_lived_image_url</code> (uguu.se, ~48h) alongside the short-lived <code>metadata_image_url</code>.</p>
             </div>
             <div class="setting" id="s-order-wrap">
               <label>External provider order</label>
@@ -217,7 +222,8 @@
             </div>
             <div class="setting" id="s-localttl-wrap" hidden>
               <label for="s-localttl">Local file lifetime (hours)</label>
-              <input id="s-localttl" type="number" min="1" max="720" value="24">
+              <input id="s-localttl" type="number" min="0" max="720" value="24">
+              <p class="muted">Set to <code>0</code> for no expiry.</p>
             </div>
             <div class="setting">
               <label for="s-baseurl">Public base URL</label>

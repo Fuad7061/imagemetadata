@@ -15,7 +15,7 @@
     logPage: 0,
     logLimit: 25,
     lastCurl: '',
-    order: ['tmpfiles', 'uguu', 'litterbox'],
+    order: ['tmpfiles', 'uguu', 'litterbox', 'catbox'],
   };
 
   async function api(path, options = {}) {
@@ -330,7 +330,8 @@
     const s = state.settings;
     $('#s-anon').checked = !!s.allowAnonymous;
     $('#s-uploadmode').value = s.uploadMode || 'external';
-    $('#s-localttl').value = s.localFileTtlHours || 24;
+    $('#s-longlived').checked = s.createLongLivedLink !== false;
+    $('#s-localttl').value = s.localFileTtlHours ?? 24;
     $('#s-baseurl').value = s.publicBaseUrl || '';
     $('#s-profile').value = s.defaultCameraProfile || '';
     $('#s-rlenabled').checked = !!s.rateLimitEnabled;
@@ -342,7 +343,7 @@
     $('#s-country').value = loc.country || '';
     $('#s-lat').value = loc.lat ?? '';
     $('#s-lon').value = loc.lon ?? '';
-    state.order = Array.isArray(s.uploadOrder) ? [...s.uploadOrder] : ['tmpfiles', 'uguu', 'litterbox'];
+    state.order = Array.isArray(s.uploadOrder) ? [...s.uploadOrder] : ['tmpfiles', 'uguu', 'litterbox', 'catbox'];
     renderOrder();
     toggleUploadFields();
   }
@@ -368,6 +369,7 @@
   function toggleUploadFields() {
     const local = $('#s-uploadmode').value === 'local';
     $('#s-order-wrap').hidden = local;
+    $('#s-longlived-wrap').hidden = local;
     $('#s-localttl-wrap').hidden = !local;
   }
 
@@ -381,6 +383,7 @@
         allowAnonymous: $('#s-anon').checked,
         uploadMode: $('#s-uploadmode').value,
         uploadOrder: state.order,
+        createLongLivedLink: $('#s-longlived').checked,
         publicBaseUrl: $('#s-baseurl').value.trim(),
         defaultCameraProfile: $('#s-profile').value,
         defaultLocation: hasLocation ? {
@@ -529,6 +532,8 @@
       </table></div>
       <h3>Supported inputs</h3>
       <p class="muted">JPEG, PNG, WebP, GIF, BMP, TIFF. Output is always JPEG. Non-JPEG URLs are transcoded via wsrv.nl (q=99) before metadata is written.</p>
+      <h3>Response URLs</h3>
+      <p class="muted"><code>metadata_image_url</code> / <code>stripped_image_url</code> is the short-lived download link (~1h on tmpfiles.org). <code>long_lived_image_url</code> is a second link valid for ~48h (uguu.se), created by default — toggle it in Settings. For no expiry, use self-hosted storage with TTL <code>0</code> or move <code>catbox</code> to the top of the provider order.</p>
       <div class="code-head"><span>Example request</span><button class="btn btn-ghost btn-sm" data-copy-doc>Copy</button></div>
       <pre class="code-block">${esc(curl)}</pre>`;
     $('[data-copy-doc]').onclick = () => copyText(curl, 'cURL copied');

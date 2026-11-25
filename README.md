@@ -2,7 +2,7 @@
 
 Self-hosted image metadata API + admin dashboard. It embeds realistic EXIF/XMP/IPTC camera metadata into images, strips metadata when asked, and exposes everything through a protected web UI.
 
-The original Cloudflare Worker (`worker.js`) is kept untouched as a reference. `src/core.js` is a direct port of its logic: same endpoints, same request fields, same validation limits, same camera profiles, same EXIF/XMP/IPTC tags, and the same upload fallback chain (`tmpfiles.org` → `uguu.se` → `litterbox.catbox.moe`).
+The original Cloudflare Worker (`worker.js`) is kept untouched as a reference. `src/core.js` is a direct port of its logic: same endpoints, same request fields, same validation limits, same camera profiles, same EXIF/XMP/IPTC tags, and the same default upload chain (`tmpfiles.org` → `uguu.se` → `litterbox`), with `catbox.moe` (permanent) available as an extra provider in Settings.
 
 ## Features
 
@@ -107,11 +107,11 @@ curl -X POST https://<your-domain>/embed-metadata \
   }'
 ```
 
-Response includes `metadata_image_url`, `expires_at`, `upload_provider`, `file_size_bytes`, `format`, `output_format`, `metadata`, and `exif_context` — unchanged from the original worker.
+Response includes the original `metadata_image_url` (tmpfiles.org, ~1h), `expires_at`, `upload_provider`, `file_size_bytes`, `format`, `output_format`, `metadata`, and `exif_context`, plus `long_lived_image_url`, `long_lived_expires_at`, and `long_lived_upload_provider` — a second ~48h link from uguu.se. Disable it in Settings (**Add 48-hour image URL**) if you don't need it.
 
 ### `POST /strip-metadata`
 
-Only `image_path` is required. Response includes `stripped_image_url`, `expires_at`, `upload_provider`, `file_size_bytes`, `format`, and `output_format`.
+Only `image_path` is required. Response includes `stripped_image_url`, `expires_at`, `upload_provider`, `file_size_bytes`, `format`, `output_format`, and the same `long_lived_*` fields.
 
 ## Dashboard
 
@@ -119,7 +119,7 @@ Only `image_path` is required. Response includes `stripped_image_url`, `expires_
 - **API Keys** — create (secret shown once), enable/disable, delete, usage stats.
 - **Playground** — send a test request and copy the cURL command.
 - **Logs** — searchable request history; automatically pruned after 10 days.
-- **Settings** — anonymous access toggle, upload target and provider order, public base URL, default camera/location, rate limits, local file lifetime, admin key rotation.
+- **Settings** — anonymous access toggle, upload target, 48-hour URL toggle, provider order (including permanent catbox.moe), public base URL, default camera/location, rate limits, local file lifetime (`0` = never), admin key rotation.
 - **API Docs** — parameter reference and a cURL example using your key.
 
 ## Environment variables
@@ -163,5 +163,5 @@ public/               dashboard UI (no external CDN dependencies)
 ## Suggestions / notes
 
 - Keep `PUBLIC_BASE_URL` set in Coolify; otherwise links in API responses use the internal request host, which may not be reachable publicly.
-- External upload providers are free temp hosts with short expiry (1–48h). For deterministic links, switch Settings → **Upload target** to **Self-hosted local storage** and keep `/app/data` persistent.
+- External upload providers are free temp hosts (`metadata_image_url` ~1h, `long_lived_image_url` ~48h). For no expiry, either switch Settings → **Upload target** to **Self-hosted local storage** with TTL `0`, or move `catbox` to the top of **External provider order**. Keep `/app/data` persistent for local storage.
 - If you expect large base64 images, raise `MAX_BODY_SIZE_MB` in Coolify.

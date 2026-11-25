@@ -12,7 +12,8 @@ const DAY = 86_400_000;
 const DEFAULT_SETTINGS = {
   allowAnonymous: false,
   uploadMode: 'external',
-  uploadOrder: ['tmpfiles', 'uguu', 'litterbox'],
+  uploadOrder: ['tmpfiles', 'uguu', 'litterbox', 'catbox'],
+  createLongLivedLink: true,
   publicBaseUrl: '',
   defaultCameraProfile: '',
   defaultLocation: null,
@@ -67,7 +68,8 @@ function sanitizeLoaded(raw) {
   if (!Array.isArray(base.settings.uploadOrder) || !base.settings.uploadOrder.length) {
     base.settings.uploadOrder = [...DEFAULT_SETTINGS.uploadOrder];
   }
-  base.settings.uploadOrder = base.settings.uploadOrder.filter(n => ['tmpfiles', 'uguu', 'litterbox'].includes(n));
+  base.settings.uploadOrder = base.settings.uploadOrder.filter(n => ['tmpfiles', 'uguu', 'litterbox', 'catbox'].includes(n));
+  if (!base.settings.uploadOrder.includes('catbox')) base.settings.uploadOrder.push('catbox');
   base.settings.uploadMode = base.settings.uploadMode === 'local' ? 'local' : 'external';
   base.admin = raw.admin && raw.admin.hash ? raw.admin : null;
   base.apiKeys = Array.isArray(raw.apiKeys) ? raw.apiKeys.filter(k => k && k.hash && k.id) : [];
@@ -295,7 +297,9 @@ export function saveLocalFile(bytes, filename) {
     path: filePath,
     size: bytes.length,
     createdAt: now(),
-    expiresAt: now() + Math.max(1, Number(state.settings.localFileTtlHours) || 24) * 3600_000,
+    expiresAt: Number(state.settings.localFileTtlHours) === 0
+      ? null
+      : now() + Math.max(1, Number(state.settings.localFileTtlHours) || 24) * 3600_000,
   };
   state.files.push(rec);
   scheduleSave();
@@ -360,7 +364,7 @@ export function cleanup() {
   state.logs = state.logs.filter(l => l.ts >= cutoff);
   state.sessions = state.sessions.filter(s => s.expiresAt > now());
   for (const file of [...state.files]) {
-    if (file.expiresAt <= now()) {
+    if (file.expiresAt !== null && file.expiresAt <= now()) {
       try { fs.unlinkSync(file.path); } catch { /* already gone */ }
       state.files = state.files.filter(f => f.id !== file.id);
     }

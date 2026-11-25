@@ -250,12 +250,27 @@ export default {
             return jsonResp({ error: `Upload failed (all providers): ${e.message}` }, 502);
         }
 
+        let longLived = null;
+        if (typeof options.longLivedUpload === "function" && uploadResult.provider !== "local") {
+            try {
+                longLived = await options.longLivedUpload(outputBytes, outFilename);
+            } catch (e) {
+                console.error("Long-lived upload failed:", e.message);
+            }
+        }
+        const longLivedFields = longLived ? {
+            long_lived_image_url: longLived.url,
+            long_lived_expires_at: longLived.expires_at,
+            long_lived_upload_provider: longLived.provider
+        } : {};
+
         if (isStrip) {
             return jsonResp({
                 success: true,
                 stripped_image_url: uploadResult.url,
                 expires_at: uploadResult.expires_at,
                 upload_provider: uploadResult.provider,
+                ...longLivedFields,
                 original_url: image_path,
                 file_size_bytes: outputBytes.length,
                 format: detectedFormat,
@@ -268,6 +283,7 @@ export default {
             metadata_image_url: uploadResult.url,
             expires_at: uploadResult.expires_at,
             upload_provider: uploadResult.provider,
+            ...longLivedFields,
             original_url: image_path,
             file_size_bytes: outputBytes.length,
             format: detectedFormat,
@@ -1019,7 +1035,7 @@ async function uploadToTmpfiles(bytes, filename) {
 /**
  * Upload to uguu.se (48-hour expiry, 100 MB limit).
  */
-async function uploadToUguu(bytes, filename) {
+export async function uploadToUguu(bytes, filename) {
     const form = new FormData();
     form.append("files[]", new Blob([bytes], { type: getMimeType(filename) }), filename);
     const res = await fetch("https://uguu.se/upload", {
@@ -1058,11 +1074,30 @@ async function uploadToLitterbox(bytes, filename) {
 }
 
 /**
- * Try upload providers in order: tmpfiles → uguu → litterbox.
+ * Upload to catbox.moe (permanent, 200 MB limit).
+ */
+export async function uploadToCatbox(bytes, filename) {
+    const form = new FormData();
+    form.append("reqtype", "fileupload");
+    form.append("fileToUpload", new Blob([bytes], { type: getMimeType(filename) }), filename);
+    const res = await fetch("https://catbox.moe/user/api.php", {
+        method: "POST",
+        body: form,
+        signal: AbortSignal.timeout(20_000),
+    });
+    if (!res.ok) throw new Error(`catbox HTTP ${res.status}`);
+    const url = (await res.text()).trim();
+    if (!url.startsWith("http")) throw new Error(`catbox invalid response: ${url.slice(0, 100)}`);
+    return { url, expires_at: null, provider: "catbox" };
+}
+
+/**
+ * Try upload providers in order: catbox → tmpfiles → uguu → litterbox.
  * Returns on the first success; throws a consolidated error if all fail.
  */
 async function uploadWithFallback(bytes, filename, options = {}) {
     const allProviders = {
+        catbox: () => uploadToCatbox(bytes, filename),
         tmpfiles: () => uploadToTmpfiles(bytes, filename),
         uguu: () => uploadToUguu(bytes, filename),
         litterbox: () => uploadToLitterbox(bytes, filename),
@@ -1179,7 +1214,7 @@ curl -X POST ${base}/embed-metadata \\
 \`\`\`
 
 ## Response
-Returns a JSON object containing the \`metadata_image_url\` (valid for 1 hour), file details, and applied \`exif_context\`.
+Returns a JSON object containing the \`metadata_image_url\` (tmpfiles.org, ~1 hour), a second \`long_lived_image_url\` (uguu.se, ~48 hours), file details, and applied \`exif_context\`. The long-lived URL can be disabled in Settings. For no expiry at all, switch the upload target to self-hosted storage with TTL \`0\`, or move \`catbox\` to the top of the provider order.
 `;
     return new Response(markdown, {
         status: 200,

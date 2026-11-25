@@ -8,7 +8,7 @@ import * as store from './store.js';
 import * as auth from './auth.js';
 import * as rl from './ratelimit.js';
 import * as h from './http-utils.js';
-import core from './core.js';
+import core, { uploadToUguu } from './core.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PUBLIC_DIR = path.join(ROOT, 'public');
@@ -87,10 +87,12 @@ function buildCoreOptions(url, req, settings) {
       const rec = store.saveLocalFile(bytes, filename);
       return {
         url: `${base}/f/${rec.id}.jpg`,
-        expires_at: new Date(rec.expiresAt).toISOString(),
+        expires_at: rec.expiresAt === null ? null : new Date(rec.expiresAt).toISOString(),
         provider: 'local',
       };
     };
+  } else if (settings.createLongLivedLink !== false) {
+    options.longLivedUpload = (bytes, filename) => uploadToUguu(bytes, filename);
   }
   return options;
 }
@@ -127,7 +129,7 @@ function serveLocalFile(req, res, url, started) {
   const match = /^\/f\/([0-9a-f-]{36})\.jpg$/i.exec(url.pathname);
   if (!match) return json(req, res, started, errorResponse('Not found'), 404);
   const record = store.getLocalFile(match[1]);
-  if (!record || record.expiresAt <= Date.now()) {
+  if (!record || (record.expiresAt !== null && record.expiresAt <= Date.now())) {
     return json(req, res, started, errorResponse('File not found or expired'), 404);
   }
   let buffer;
@@ -358,19 +360,19 @@ async function handleAdmin(req, res, url, started) {
     if (!requireJsonObject(body)) return json(req, res, started, errorResponse('Invalid body.'), 400);
 
     const allowed = new Set([
-      'allowAnonymous', 'uploadMode', 'uploadOrder', 'publicBaseUrl',
+      'allowAnonymous', 'uploadMode', 'uploadOrder', 'createLongLivedLink', 'publicBaseUrl',
       'defaultCameraProfile', 'defaultLocation', 'rateLimitEnabled',
       'rateLimitMax', 'rateLimitWindowMs', 'localFileTtlHours',
     ]);
     const patch = {};
     for (const [key, value] of Object.entries(body)) {
       if (!allowed.has(key)) continue;
-      if (key === 'allowAnonymous' || key === 'rateLimitEnabled') patch[key] = !!value;
+      if (key === 'allowAnonymous' || key === 'rateLimitEnabled' || key === 'createLongLivedLink') patch[key] = !!value;
       else if (key === 'uploadMode') patch[key] = value === 'local' ? 'local' : 'external';
       else if (key === 'uploadOrder') {
         if (Array.isArray(value)) {
-          patch[key] = value.filter(n => ['tmpfiles', 'uguu', 'litterbox'].includes(n)).slice(0, 3);
-          if (!patch[key].length) patch[key] = ['tmpfiles', 'uguu', 'litterbox'];
+          patch[key] = value.filter(n => ['tmpfiles', 'uguu', 'litterbox', 'catbox'].includes(n)).slice(0, 4);
+          if (!patch[key].length) patch[key] = ['tmpfiles', 'uguu', 'litterbox', 'catbox'];
         }
       } else if (key === 'publicBaseUrl' || key === 'defaultCameraProfile') {
         patch[key] = String(value || '').replace(/\/$/, '').slice(0, 300);
@@ -389,7 +391,10 @@ async function handleAdmin(req, res, url, started) {
         }
       } else if (key === 'rateLimitMax') patch[key] = Math.min(1_000_000, Math.max(1, Number(value) || 60));
       else if (key === 'rateLimitWindowMs') patch[key] = Math.min(86_400_000, Math.max(1000, Number(value) || 60000));
-      else if (key === 'localFileTtlHours') patch[key] = Math.min(720, Math.max(1, Number(value) || 24));
+      else if (key === 'localFileTtlHours') {
+        const ttl = Number(value);
+        patch[key] = Number.isFinite(ttl) ? Math.min(720, Math.max(0, Math.trunc(ttl))) : 24;
+      }
     }
     const updated = store.updateSettings(patch);
     return json(req, res, started, { ok: true, settings: updated }, 200, {},
