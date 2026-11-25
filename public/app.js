@@ -533,7 +533,7 @@
       <h3>Supported inputs</h3>
       <p class="muted">JPEG, PNG, WebP, GIF, BMP, TIFF. Output is always JPEG. Non-JPEG URLs are transcoded via wsrv.nl (q=99) before metadata is written.</p>
       <h3>Response URLs</h3>
-      <p class="muted"><code>metadata_image_url</code> / <code>stripped_image_url</code> is the short-lived download link (~1h on tmpfiles.org). <code>long_lived_image_url</code> is a second link valid for ~48h (uguu.se), created by default — toggle it in Settings. For no expiry, use self-hosted storage with TTL <code>0</code> or move <code>catbox</code> to the top of the provider order.</p>
+      <p class="muted"><code>metadata_image_url</code> / <code>stripped_image_url</code> is the direct tmpfiles.org download link (~1h). <code>metadata_image_page_url</code> / <code>stripped_image_page_url</code> is the tmpfiles.org file page URL, returned alongside it with no extra upload. <code>long_lived_image_url</code> (uguu.se, ~48h) is optional and off by default — enable it in Settings if needed.</p>
       <div class="code-head"><span>Example request</span><button class="btn btn-ghost btn-sm" data-copy-doc>Copy</button></div>
       <pre class="code-block">${esc(curl)}</pre>`;
     $('[data-copy-doc]').onclick = () => copyText(curl, 'cURL copied');

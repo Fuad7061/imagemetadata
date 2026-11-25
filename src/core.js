@@ -263,6 +263,12 @@ export default {
             long_lived_expires_at: longLived.expires_at,
             long_lived_upload_provider: longLived.provider
         } : {};
+        const pageUrlFields = uploadResult.page_url
+            ? (isStrip
+                ? { stripped_image_page_url: uploadResult.page_url }
+                : { metadata_image_page_url: uploadResult.page_url })
+            : {};
+        const extraUrlFields = { ...pageUrlFields, ...longLivedFields };
 
         if (isStrip) {
             return jsonResp({
@@ -270,7 +276,7 @@ export default {
                 stripped_image_url: uploadResult.url,
                 expires_at: uploadResult.expires_at,
                 upload_provider: uploadResult.provider,
-                ...longLivedFields,
+                ...extraUrlFields,
                 original_url: image_path,
                 file_size_bytes: outputBytes.length,
                 format: detectedFormat,
@@ -283,7 +289,7 @@ export default {
             metadata_image_url: uploadResult.url,
             expires_at: uploadResult.expires_at,
             upload_provider: uploadResult.provider,
-            ...longLivedFields,
+            ...extraUrlFields,
             original_url: image_path,
             file_size_bytes: outputBytes.length,
             format: detectedFormat,
@@ -1024,7 +1030,12 @@ async function uploadToTmpfiles(bytes, filename) {
                 // Ignore warm-up errors; URL is still valid
             }
 
-            return { url: dlUrl, expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(), provider: "tmpfiles" };
+            return {
+                url: dlUrl,
+                page_url: pageUrl,
+                expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+                provider: "tmpfiles"
+            };
         } catch (e) {
             lastError = e;
         }
@@ -1214,7 +1225,7 @@ curl -X POST ${base}/embed-metadata \\
 \`\`\`
 
 ## Response
-Returns a JSON object containing the \`metadata_image_url\` (tmpfiles.org, ~1 hour), a second \`long_lived_image_url\` (uguu.se, ~48 hours), file details, and applied \`exif_context\`. The long-lived URL can be disabled in Settings. For no expiry at all, switch the upload target to self-hosted storage with TTL \`0\`, or move \`catbox\` to the top of the provider order.
+Returns \`metadata_image_url\` (tmpfiles.org direct download, ~1 hour) and \`metadata_image_page_url\` (the tmpfiles.org file page), plus file details and applied \`exif_context\`. For strip requests the fields are \`stripped_image_url\` and \`stripped_image_page_url\`. An optional \`long_lived_image_url\` (uguu.se, ~48 hours) can be enabled in Settings — it is off by default. For no expiry, use self-hosted storage with TTL \`0\`, or move \`catbox\` to the top of the provider order.
 `;
     return new Response(markdown, {
         status: 200,

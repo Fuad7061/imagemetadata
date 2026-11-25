@@ -13,7 +13,7 @@ const DEFAULT_SETTINGS = {
   allowAnonymous: false,
   uploadMode: 'external',
   uploadOrder: ['tmpfiles', 'uguu', 'litterbox', 'catbox'],
-  createLongLivedLink: true,
+  createLongLivedLink: false,
   publicBaseUrl: '',
   defaultCameraProfile: '',
   defaultLocation: null,
@@ -57,6 +57,7 @@ function blankState() {
     sessions: [],
     logs: [],
     files: [],
+    flags: {},
   };
 }
 
@@ -71,6 +72,11 @@ function sanitizeLoaded(raw) {
   base.settings.uploadOrder = base.settings.uploadOrder.filter(n => ['tmpfiles', 'uguu', 'litterbox', 'catbox'].includes(n));
   if (!base.settings.uploadOrder.includes('catbox')) base.settings.uploadOrder.push('catbox');
   base.settings.uploadMode = base.settings.uploadMode === 'local' ? 'local' : 'external';
+  base.flags = raw.flags && typeof raw.flags === 'object' ? raw.flags : {};
+  if (!base.flags.longLivedDefaultOff) {
+    base.settings.createLongLivedLink = false;
+    base.flags.longLivedDefaultOff = true;
+  }
   base.admin = raw.admin && raw.admin.hash ? raw.admin : null;
   base.apiKeys = Array.isArray(raw.apiKeys) ? raw.apiKeys.filter(k => k && k.hash && k.id) : [];
   base.sessions = Array.isArray(raw.sessions) ? raw.sessions.filter(s => s && s.hash && s.expiresAt > now()) : [];
